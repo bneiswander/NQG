@@ -1,23 +1,27 @@
 from __future__ import division
 
-import s2s
 import argparse
+import logging
+import math
+import time
+
 import torch
 import torch.nn as nn
 from torch import cuda
 from torch.autograd import Variable
-import math
-import time
-import logging
+
+import s2s
 
 try:
     import ipdb
 except ImportError:
     pass
-from nltk.translate import bleu_score
-from s2s.xinit import xavier_normal, xavier_uniform
 import os
+
+from nltk.translate import bleu_score
+
 import xargs
+from s2s.xinit import xavier_normal, xavier_uniform
 
 parser = argparse.ArgumentParser(description='train.py')
 xargs.add_data_options(parser)

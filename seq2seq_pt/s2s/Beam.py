@@ -1,5 +1,9 @@
 from __future__ import division
 
+import torch
+
+import s2s
+
 # Class for managing the internals of the beam search process.
 #
 #
@@ -12,8 +16,6 @@ from __future__ import division
 #
 # Takes care of beams, back pointers, and scores.
 
-import torch
-import s2s
 
 try:
     import ipdb
@@ -77,7 +79,9 @@ class Beam(object):
             finish_index = self.nextYs[-1].eq(s2s.Constants.EOS)
             if any(finish_index):
                 # wordLk.masked_fill_(finish_index.unsqueeze(1).expand_as(wordLk), -float('inf'))
-                allScores.masked_fill_(finish_index.unsqueeze(1).expand_as(allScores), -float('inf'))
+                allScores.masked_fill_(
+                    finish_index.unsqueeze(1).expand_as(allScores), -float("inf")
+                )
                 for i in range(self.size):
                     if self.nextYs[-1][i] == s2s.Constants.EOS:
                         # wordLk[i][s2s.Constants.EOS] = 0
@@ -106,7 +110,7 @@ class Beam(object):
 
         # bestScoresId is flattened beam x word array, so calculate which
         # word and beam each score came from
-        prevK = bestScoresId / numAll
+        prevK = bestScoresId // numAll  # fixing below problem by updating this
         # predict = bestScoresId - prevK * numWords
         predict = bestScoresId - prevK * numAll
         isCopy = predict.ge(self.tt.LongTensor(self.size).fill_(numWords)).long()
@@ -122,7 +126,7 @@ class Beam(object):
         self.nextYs.append(final_predict)
         self.nextYs_true.append(predict)
         self.isCopy.append(isCopy)
-        self.attn.append(attnOut.index_select(0, prevK))
+        self.attn.append(attnOut.index_select(0, prevK))  # TODO: this is the problem
 
         # End condition is when every one is EOS.
         if all(self.nextYs[-1].eq(s2s.Constants.EOS)):
@@ -159,4 +163,4 @@ class Beam(object):
             copyPos.append(self.nextYs_true[j + 1][k])
             k = self.prevKs[j][k]
 
-        return hyp[::-1],  isCopy[::-1], copyPos[::-1],torch.stack(attn[::-1])
+        return hyp[::-1], isCopy[::-1], copyPos[::-1], torch.stack(attn[::-1])
