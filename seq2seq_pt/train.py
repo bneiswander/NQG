@@ -10,13 +10,9 @@ from nltk.translate import bleu_score
 from torch import cuda
 from torch.autograd import Variable
 
+import constants
 import s2s
 from s2s.xinit import xavier_normal, xavier_uniform
-
-NQG_HOME = '/content/drive/MyDrive/UC_C/natural_language_processing/NQG_HOME'
-DATAHOME = f'{NQG_HOME}/data/redistribute/QG'
-EXEHOME = f'{NQG_HOME}/code/NQG/seq2seq_pt'
-SAVEPATH = f'{DATAHOME}/models/NQG_plus'
 
 opt = {
     "save_path": SAVEPATH,
