@@ -1,50 +1,88 @@
-from __future__ import division
-
-import argparse
 import logging
 import math
+import os
 import time
+from types import SimpleNamespace
 
 import torch
 import torch.nn as nn
+from nltk.translate import bleu_score
 from torch import cuda
 from torch.autograd import Variable
 
 import s2s
-
-try:
-    import ipdb
-except ImportError:
-    pass
-import os
-
-from nltk.translate import bleu_score
-
-import xargs
 from s2s.xinit import xavier_normal, xavier_uniform
 
-parser = argparse.ArgumentParser(description='train.py')
-xargs.add_data_options(parser)
-xargs.add_model_options(parser)
-xargs.add_train_options(parser)
+NQG_HOME = '/content/drive/MyDrive/UC_C/natural_language_processing/NQG_HOME'
+DATAHOME = f'{NQG_HOME}/data/redistribute/QG'
+EXEHOME = f'{NQG_HOME}/code/NQG/seq2seq_pt'
+SAVEPATH = f'{DATAHOME}/models/NQG_plus'
 
-opt = parser.parse_args()
+opt = {
+    "save_path": SAVEPATH,
+    "train_from_state_dict": "",
+    "train_from": "",
+    "online_process_data": True,
+    "process_shuffle": False,
+    "lower_input": False,
+    "train_src": f"{DATAHOME}/train/train.txt.source.txt",
+    "src_vocab": f"{DATAHOME}/train/vocab.txt.20k",
+    "train_bio": f"{DATAHOME}/train/train.txt.bio",
+    "bio_vocab": f"{DATAHOME}/train/bio.vocab.txt",
+    "train_feats": [f"{DATAHOME}/train/train.txt.pos", f"{DATAHOME}/train/train.txt.ner", f"{DATAHOME}/train/train.txt.case"],
+    "feat_vocab": f"{DATAHOME}/train/feat.vocab.txt",
+    "train_tgt": f"{DATAHOME}/train/train.txt.target.txt",
+    "tgt_vocab": f"{DATAHOME}/train/vocab.txt.20k",
+    "layers": 1,
+    "max_sent_length": 100,
+    "enc_rnn_size": 512,
+    "dec_rnn_size": 512,
+    "input_feed": 1,
+    "maxout_pool_size": 2,
+    "brnn": True,
+    "brnn_merge": "concat",
+    "word_vec_size": 300,
+    "param_init": 0.1,
+    "max_grad_norm": 5,
+    "max_weight_value": 15,
+    "att_vec_size": 512,
+    "dropout": 0.5,
+    "batch_size": 64,
+    "max_generator_batches": 32,
+    "beam_size": 5,
+    "epochs": 20,
+    "start_epoch": 1,
+    "optim": "adam",
+    "learning_rate": 0.001,
+    "learning_rate_decay": 0.5,
+    "start_decay_at": 8,
+    "gpus": [0],
+    "curriculum": 0,
+    "extra_shuffle": True,
+    "start_eval_batch": 500,
+    "eval_per_batch": 500,
+    "halve_lr_bad_count": 3,
+    "seed": 12345,
+    "cuda_seed": 12345,
+    "log_interval": 100,
+    "dev_input_src": f"{DATAHOME}/dev/dev.txt.shuffle.dev.source.txt",
+    "dev_bio": f"{DATAHOME}/dev/dev.txt.shuffle.dev.bio",
+    "dev_feats": [f"{DATAHOME}/dev/dev.txt.shuffle.dev.pos", f"{DATAHOME}/dev/dev.txt.shuffle.dev.ner", f"{DATAHOME}/dev/dev.txt.shuffle.dev.case"],
+    "dev_ref": f"{DATAHOME}/dev/dev.txt.shuffle.dev.target.txt",
+    "pre_word_vecs_enc": None,
+    "pre_word_vecs_dec": None,
+    "log_home": ""
+}
+
+opt = SimpleNamespace(**opt)
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s:%(name)s]: %(message)s', level=logging.INFO)
-log_file_name = time.strftime("%Y%m%d-%H%M%S") + '.log.txt'
-if opt.log_home:
-    log_file_name = os.path.join(opt.log_home, log_file_name)
-file_handler = logging.FileHandler(log_file_name, encoding='utf-8')
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-5.5s:%(name)s] %(message)s'))
-logging.root.addHandler(file_handler)
+
 logger = logging.getLogger(__name__)
+logger.info(f"Pytorch version: {torch.__version__}")
 
-logger.info('My PID is {0}'.format(os.getpid()))
-logger.info('PyTorch version: {0}'.format(str(torch.__version__)))
-logger.info(opt)
-
-if torch.cuda.is_available() and not opt.gpus:
-    logger.info("WARNING: You have a CUDA device, so you should probably run with -gpus 0")
+DEVICE = torch.device('cuda')
+logger.info("Using cuda.")
 
 if opt.seed > 0:
     torch.manual_seed(opt.seed)
@@ -52,11 +90,6 @@ if opt.seed > 0:
 if opt.gpus:
     if opt.cuda_seed > 0:
         torch.cuda.manual_seed(opt.cuda_seed)
-    cuda.set_device(opt.gpus[0])
-
-logger.info('My seed is {0}'.format(torch.initial_seed()))
-logger.info('My cuda seed is {0}'.format(torch.cuda.initial_seed()))
-
 
 def NMTCriterion(vocabSize):
     weight = torch.ones(vocabSize)
@@ -199,6 +232,7 @@ def evalModel(model, translator, evalData):
     with open(ofn, 'w', encoding='utf-8') as of:
         for p in predict:
             of.write(' '.join(p) + '\n')
+
     return report_metric
 
 
@@ -328,7 +362,6 @@ def trainModel(model, translator, trainData, validData, dataset, optim):
         logger.info('Saving checkpoint for epoch {0}...'.format(epoch))
         saveModel()
 
-
 def main():
     import onlinePreprocess
     onlinePreprocess.lower = opt.lower_input
@@ -402,7 +435,3 @@ def main():
     if opt.dev_input_src and opt.dev_ref:
         validData = load_dev_data(translator, opt.dev_input_src, opt.dev_bio, opt.dev_feats, opt.dev_ref)
     trainModel(model, translator, trainData, validData, dataset, optim)
-
-
-if __name__ == "__main__":
-    main()
