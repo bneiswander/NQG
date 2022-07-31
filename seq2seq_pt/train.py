@@ -10,8 +10,8 @@ from nltk.translate import bleu_score
 from torch import cuda
 from torch.autograd import Variable
 
-import constants
 import s2s
+from constants import DATAHOME, SAVEPATH
 from s2s.xinit import xavier_normal, xavier_uniform
 
 opt = {
@@ -74,7 +74,7 @@ opt = SimpleNamespace(**opt)
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s:%(name)s]: %(message)s', level=logging.INFO)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("__main__")
 logger.info(f"Pytorch version: {torch.__version__}")
 
 DEVICE = torch.device('cuda')

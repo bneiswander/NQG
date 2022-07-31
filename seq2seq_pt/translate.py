@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import torch
 
-import constants
 import s2s
+from constants import DATAHOME, SAVEPATH
 
-opt_translate = {
+opt = {
     "model": f"{SAVEPATH}/model_e20.pt",
     "src": f"{DATAHOME}/test_sample/dev.txt.shuffle.test.source.txt",
     "bio": f"{DATAHOME}/test_sample/dev.txt.shuffle.test.bio",
@@ -30,7 +30,7 @@ opt_translate = {
     "gpu": 0,
 }
 
-opt_translate = SimpleNamespace(**opt_translate)
+opt = SimpleNamespace(**opt)
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s:%(name)s]: %(message)s", level=logging.INFO
@@ -42,7 +42,7 @@ file_handler.setFormatter(
     logging.Formatter("%(asctime)s [%(levelname)-5.5s:%(name)s] %(message)s")
 )
 logging.root.addHandler(file_handler)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("__main__")
 
 
 def reportScore(name, scoreTotal, wordsTotal):
@@ -64,7 +64,7 @@ def addPair(f1, f2):
     yield (None, None)
 
 
-def translateMain(opt):
+def main():
     logger.info(opt)
     opt.cuda = opt.gpu > -1
     if opt.cuda:
